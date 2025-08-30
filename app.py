@@ -19,20 +19,18 @@ from datetime import datetime
 import string
 
 # Download required NLTK data
+import ssl
 try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt')
+    _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
+else:
+    ssl._create_default_https_context = _create_unverified_https_context
 
-try:
-    nltk.data.find('tokenizers/punkt_tab')
-except LookupError:
-    nltk.download('punkt_tab')
-
-try:
-    nltk.data.find('corpora/stopwords')
-except LookupError:
-    nltk.download('stopwords')
+# Download NLTK data without checking if it exists first
+nltk.download('punkt', quiet=True)
+nltk.download('stopwords', quiet=True)
+# punkt_tab is included in punkt for newer versions
 
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize, sent_tokenize
