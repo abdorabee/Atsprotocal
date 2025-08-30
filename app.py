@@ -643,308 +643,395 @@ def main():
     if analyzer.nlp is None:
         st.stop()
     
-    # Centered upload section
-    col1, col2, col3 = st.columns([1, 2, 1])
+    # Initialize session state for wizard steps
+    if 'step' not in st.session_state:
+        st.session_state.step = 1
+    if 'resume_text' not in st.session_state:
+        st.session_state.resume_text = None
+    if 'analysis_results' not in st.session_state:
+        st.session_state.analysis_results = None
     
-    with col2:
-        st.markdown("""
-        <div style="background: white; padding: 2rem; border-radius: 16px; margin-bottom: 2rem; box-shadow: 0 8px 32px rgba(0,0,0,0.1); text-align: center;">
-            <h2 style="color: #2d3748; margin-top: 0; font-weight: 600; margin-bottom: 1rem;">📤 Upload Your Resume</h2>
-            <p style="color: #718096; font-size: 1rem; margin-bottom: 2rem;">Get instant AI-powered analysis and improvement suggestions</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        uploaded_file = st.file_uploader(
-            "Choose your resume file",
-            type=['pdf', 'txt'],
-            help="Upload a PDF or text file (max 5MB)"
-        )
-        
-        st.markdown("""
-        <div style="background: white; padding: 1.5rem; border-radius: 12px; margin-top: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
-            <h3 style="color: #2d3748; margin-top: 0; font-weight: 600; text-align: center;">💼 Job Description (Optional)</h3>
-            <p style="color: #718096; font-size: 0.9rem; margin-bottom: 1rem; text-align: center;">Paste job description for targeted keyword analysis</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        job_description = st.text_area(
-            "Job description",
-            height=150,
-            help="If provided, the analyzer will check for job-specific keywords",
-            label_visibility="collapsed"
-        )
+    # Progress indicator
+    progress_steps = ["📤 Upload Resume", "💼 Job Details", "🔍 Analysis", "📊 Results"]
     
-    # Main content area
-    if uploaded_file is not None:
-        # File size check
-        if uploaded_file.size > 5 * 1024 * 1024:  # 5MB limit
-            st.error("File size too large. Please upload a file smaller than 5MB.")
-            return
-        
-        try:
-            # Read file content
-            file_content = uploaded_file.read()
-            file_type = 'pdf' if uploaded_file.type == 'application/pdf' else 'txt'
+    # Create progress bar
+    col1, col2, col3, col4 = st.columns(4)
+    for i, (col, step_name) in enumerate(zip([col1, col2, col3, col4], progress_steps), 1):
+        with col:
+            if i < st.session_state.step:
+                # Completed step
+                st.markdown(f"""
+                <div style="text-align: center; padding: 1rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
+                           color: white; border-radius: 8px; margin-bottom: 1rem; font-weight: 600;">
+                    ✅ {step_name}
+                </div>
+                """, unsafe_allow_html=True)
+            elif i == st.session_state.step:
+                # Current step
+                st.markdown(f"""
+                <div style="text-align: center; padding: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                           color: white; border-radius: 8px; margin-bottom: 1rem; font-weight: 600;">
+                    {step_name}
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                # Future step
+                st.markdown(f"""
+                <div style="text-align: center; padding: 1rem; background: #f1f5f9; 
+                           color: #64748b; border-radius: 8px; margin-bottom: 1rem; font-weight: 500;">
+                    {step_name}
+                </div>
+                """, unsafe_allow_html=True)
+    
+    # Step-based content
+    if st.session_state.step == 1:
+        # Step 1: Upload Resume
+        col1, col2, col3 = st.columns([1, 2, 1])
+    
+        with col2:
+            st.markdown("""
+            <div style="background: white; padding: 2rem; border-radius: 16px; margin-bottom: 2rem; box-shadow: 0 8px 32px rgba(0,0,0,0.1); text-align: center;">
+                <h2 style="color: #2d3748; margin-top: 0; font-weight: 600; margin-bottom: 1rem;">📤 Upload Your Resume</h2>
+                <p style="color: #718096; font-size: 1rem; margin-bottom: 2rem;">Drag and drop your resume or click to browse</p>
+            </div>
+            """, unsafe_allow_html=True)
             
-            # Parse resume
-            with st.spinner("Parsing resume..."):
-                resume_text = analyzer.parse_resume(file_content, file_type)
+            # Enhanced file uploader with drag-and-drop styling
+            uploaded_file = st.file_uploader(
+                "Choose your resume file",
+                type=['pdf', 'txt'],
+                help="Upload a PDF or text file (max 5MB)"
+            )
             
-            if not resume_text.strip():
-                st.error("No text could be extracted from the file. Please check if the file is valid.")
-                return
-            
-            # Modern analyze button
-            if st.button("🚀 Analyze My Resume", type="primary", use_container_width=True):
-                with st.spinner("Analyzing resume..."):
-                    results = analyzer.analyze_resume(resume_text, job_description)
+            # Real-time file validation and preview
+            if uploaded_file is not None:
+                # File validation
+                file_size_mb = uploaded_file.size / (1024 * 1024)
+                file_type = uploaded_file.type
                 
-                # Display results
-                col1, col2 = st.columns([2, 1])
+                # Show file info
+                st.success(f"✅ File uploaded: {uploaded_file.name}")
+                col_info1, col_info2 = st.columns(2)
+                with col_info1:
+                    st.metric("File Size", f"{file_size_mb:.1f} MB")
+                with col_info2:
+                    st.metric("File Type", "PDF" if file_type == "application/pdf" else "Text")
                 
-                with col2:
-                    # Modern score display
-                    score = results['score']
-                    if score >= 80:
-                        score_gradient = "linear-gradient(135deg, #10b981 0%, #059669 100%)"
-                        score_emoji = "🎉"
-                        score_text = "Excellent"
-                    elif score >= 60:
-                        score_gradient = "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)"
-                        score_emoji = "👍"
-                        score_text = "Good"
-                    else:
-                        score_gradient = "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)"
-                        score_emoji = "⚠️"
-                        score_text = "Needs Work"
+                # File size check
+                if file_size_mb > 5:
+                    st.error("❌ File size too large. Please upload a file smaller than 5MB.")
+                    st.stop()
+                
+                # Parse and preview resume
+                try:
+                    with st.spinner("📄 Extracting text from your resume..."):
+                        file_content = uploaded_file.read()
+                        file_type_str = 'pdf' if uploaded_file.type == 'application/pdf' else 'txt'
+                        resume_text = analyzer.parse_resume(file_content, file_type_str)
+                        st.session_state.resume_text = resume_text
                     
-                    st.markdown(f"""
-                    <div class="score-card" style="background: {score_gradient};">
-                        <div class="score-label">{score_emoji} ATS Compatibility</div>
-                        <div class="score-number">{score:.0f}</div>
-                        <div class="score-label">{score_text} • Out of 100</div>
+                    if resume_text.strip():
+                        # Show preview
+                        with st.expander("📖 Resume Preview", expanded=False):
+                            preview_text = resume_text[:500] + "..." if len(resume_text) > 500 else resume_text
+                            st.text_area("Extracted Text Preview", preview_text, height=150, disabled=True)
+                            st.info(f"Total words extracted: {len(resume_text.split())}")
+                        
+                        # Next step button
+                        if st.button("➡️ Continue to Job Details", type="primary", use_container_width=True):
+                            st.session_state.step = 2
+                            st.rerun()
+                    else:
+                        st.error("❌ No text could be extracted from the file. Please check if the file is valid.")
+                        
+                except Exception as e:
+                    st.error(f"❌ Error processing file: {str(e)}")
+            
+            else:
+                # Show feature cards when no file uploaded
+                st.markdown("### ✨ What We Analyze")
+                
+                feature_col1, feature_col2 = st.columns(2)
+                with feature_col1:
+                    st.markdown("""
+                    <div class="metric-card">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🎯</div>
+                        <h4 style="color: #2d3748; margin-bottom: 0.5rem; font-size: 0.9rem;">Keywords</h4>
+                        <p style="color: #718096; font-size: 0.8rem;">Job matching</p>
                     </div>
                     """, unsafe_allow_html=True)
                 
-                with col1:
-                    # Modern strengths display
-                    if results['strengths']:
-                        st.markdown("""
-                        <div class="success-card">
-                            <h3 style="margin-top: 0; font-weight: 600;">✅ Strengths Found</h3>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
-                        for strength in results['strengths']:
-                            st.markdown(f"""
-                            <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; border-left: 4px solid #10b981; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                                <span style="color: #065f46; font-weight: 500;">• {strength}</span>
-                            </div>
-                            """, unsafe_allow_html=True)
-                    
-                    # Weaknesses with detailed breakdown
-                    if results['weaknesses']:
-                        st.error("⚠️ **Areas for Improvement**")
-                        
-                        # Show detailed weaknesses if available
-                        if results.get('detailed_weaknesses'):
-                            st.markdown("""
-                            <div class="error-card">
-                                <h3 style="margin-top: 0; font-weight: 600;">⚠️ Areas for Improvement</h3>
-                                <p style="margin-bottom: 0; opacity: 0.9;">Click each section below for detailed analysis and specific recommendations</p>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            
-                            for detail in results['detailed_weaknesses']:
-                                severity_badge = {
-                                    'High': '<span class="severity-high">🔴 HIGH PRIORITY</span>',
-                                    'Medium': '<span class="severity-medium">🟡 MEDIUM</span>', 
-                                    'Low': '<span class="severity-low">🟢 LOW</span>'
-                                }.get(detail['severity'], '<span class="severity-medium">⚪ UNKNOWN</span>')
-                                
-                                with st.expander(f"{detail['category']}: {detail['issue']}", expanded=False):
-                                    st.markdown(severity_badge, unsafe_allow_html=True)
-                                    st.write(f"**Issue:** {detail['details']}")
-                                    
-                                    # Show specific examples based on category
-                                    if detail['category'] == 'Keywords' and 'missing_items' in detail:
-                                        col1, col2 = st.columns(2)
-                                        with col1:
-                                            st.write("**❌ Missing Keywords:**")
-                                            for keyword in detail['missing_items'][:10]:
-                                                st.write(f"• {keyword}")
-                                        with col2:
-                                            if detail['found_items']:
-                                                st.write("**✅ Found Keywords:**")
-                                                for keyword in detail['found_items'][:8]:
-                                                    st.write(f"• {keyword}")
-                                    
-                                    elif detail['category'] == 'Achievement Quantification':
-                                        if detail.get('unquantified_examples'):
-                                            st.write("**📝 Statements needing quantification:**")
-                                            for example in detail['unquantified_examples']:
-                                                st.write(f"• {example[:100]}...")
-                                        
-                                        if detail.get('improvement_examples'):
-                                            st.write("**💡 How to improve:**")
-                                            for example in detail['improvement_examples']:
-                                                st.write(f"• {example}")
-                                    
-                                    elif detail['category'] == 'Language Strength':
-                                        if detail.get('weak_examples'):
-                                            st.write("**❌ Weak phrases found:**")
-                                            for example in detail['weak_examples']:
-                                                st.write(f"• {example[:80]}...")
-                                        
-                                        if detail.get('replacements'):
-                                            st.write("**✅ Suggested improvements:**")
-                                            for replacement in detail['replacements']:
-                                                st.write(f"• {replacement}")
-                                    
-                                    elif detail['category'] == 'Employment History':
-                                        if detail.get('gap_details'):
-                                            st.write("**📅 Gaps detected:**")
-                                            for gap in detail['gap_details']:
-                                                st.write(f"• {gap}")
-                                        if detail.get('recommendation'):
-                                            st.info(f"💡 **Recommendation:** {detail['recommendation']}")
-                                    
-                                    elif detail['category'] == 'Resume Length':
-                                        col1, col2 = st.columns(2)
-                                        with col1:
-                                            st.metric("Current Length", detail.get('current_length', 'Unknown'))
-                                        with col2:
-                                            st.metric("Recommended", detail.get('recommended_length', '300-600 words'))
-                                        
-                                        if detail.get('areas_to_expand'):
-                                            st.write("**📈 Areas to expand:**")
-                                            for area in detail['areas_to_expand']:
-                                                st.write(f"• {area}")
-                                        elif detail.get('areas_to_condense'):
-                                            st.write("**📉 Areas to condense:**")
-                                            for area in detail['areas_to_condense']:
-                                                st.write(f"• {area}")
-                                    
-                                    elif detail['category'] == 'Contact Information':
-                                        if detail.get('missing_items'):
-                                            st.write("**❌ Missing information:**")
-                                            for item in detail['missing_items']:
-                                                st.write(f"• {item.title()}")
-                                        
-                                        if detail.get('required_items'):
-                                            st.write("**✅ Complete contact info should include:**")
-                                            for item in detail['required_items']:
-                                                st.write(f"• {item}")
-                        else:
-                            st.markdown("""
-                            <div class="error-card">
-                                <h3 style="margin-top: 0; font-weight: 600;">⚠️ Areas for Improvement</h3>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            for weakness in results['weaknesses']:
-                                st.markdown(f"""
-                                <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; border-left: 4px solid #ef4444; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                                    <span style="color: #dc2626; font-weight: 500;">• {weakness}</span>
-                                </div>
-                                """, unsafe_allow_html=True)
-                    
-                    # Modern suggestions display
-                    if results['suggestions']:
-                        st.markdown("""
-                        <div class="info-card">
-                            <h3 style="margin-top: 0; font-weight: 600; color: #2d3748;">💡 Quick Action Items</h3>
-                            <p style="margin-bottom: 0; color: #4a5568;">Priority improvements to boost your ATS score</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
-                        for i, suggestion in enumerate(results['suggestions'], 1):
-                            st.markdown(f"""
-                            <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; border-left: 4px solid #3182ce; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                                <span style="color: #2b6cb0; font-weight: 500;">{i}. {suggestion}</span>
-                            </div>
-                            """, unsafe_allow_html=True)
+                with feature_col2:
+                    st.markdown("""
+                    <div class="metric-card">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📊</div>
+                        <h4 style="color: #2d3748; margin-bottom: 0.5rem; font-size: 0.9rem;">Achievements</h4>
+                        <p style="color: #718096; font-size: 0.8rem;">Quantification</p>
+                    </div>
+                    """, unsafe_allow_html=True)
                 
-                # Detailed breakdown
-                with st.expander("📊 Detailed Analysis"):
-                    st.subheader("Resume Sections Detected")
-                    sections = analyzer.extract_sections(resume_text)
-                    
-                    for section_name, section_content in sections.items():
-                        if section_content.strip():
-                            st.write(f"**{section_name.title()}:** ✅")
-                        else:
-                            st.write(f"**{section_name.title()}:** ❌ Not detected")
-                    
-                    st.subheader("Resume Preview")
-                    st.text_area("Extracted Text", resume_text[:1000] + "..." if len(resume_text) > 1000 else resume_text, height=200)
-        
-        except Exception as e:
-            st.error(f"An error occurred while processing your resume: {str(e)}")
+                feature_col3, feature_col4 = st.columns(2)
+                with feature_col3:
+                    st.markdown("""
+                    <div class="metric-card">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">💪</div>
+                        <h4 style="color: #2d3748; margin-bottom: 0.5rem; font-size: 0.9rem;">Language</h4>
+                        <p style="color: #718096; font-size: 0.8rem;">Action verbs</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with feature_col4:
+                    st.markdown("""
+                    <div class="metric-card">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📏</div>
+                        <h4 style="color: #2d3748; margin-bottom: 0.5rem; font-size: 0.9rem;">Format</h4>
+                        <p style="color: #718096; font-size: 0.8rem;">ATS friendly</p>
+                    </div>
+                    """, unsafe_allow_html=True)
     
-    else:
-        # Show feature cards below upload section when no file is uploaded
-        pass
-        
-        # Feature cards
-        st.markdown("### ✨ What We Analyze")
-        
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.markdown("""
-            <div class="metric-card">
-                <div style="font-size: 2rem; margin-bottom: 1rem;">🎯</div>
-                <h4 style="color: #2d3748; margin-bottom: 0.5rem;">Keyword Matching</h4>
-                <p style="color: #718096; font-size: 0.9rem;">Compare against job requirements</p>
-            </div>
-            """, unsafe_allow_html=True)
+    elif st.session_state.step == 2:
+        # Step 2: Job Description
+        col1, col2, col3 = st.columns([1, 2, 1])
         
         with col2:
             st.markdown("""
-            <div class="metric-card">
-                <div style="font-size: 2rem; margin-bottom: 1rem;">📊</div>
-                <h4 style="color: #2d3748; margin-bottom: 0.5rem;">Achievement Analysis</h4>
-                <p style="color: #718096; font-size: 0.9rem;">Quantified results detection</p>
+            <div style="background: white; padding: 2rem; border-radius: 16px; margin-bottom: 2rem; box-shadow: 0 8px 32px rgba(0,0,0,0.1); text-align: center;">
+                <h2 style="color: #2d3748; margin-top: 0; font-weight: 600; margin-bottom: 1rem;">💼 Job Description</h2>
+                <p style="color: #718096; font-size: 1rem; margin-bottom: 2rem;">Add job description for targeted keyword analysis (optional)</p>
             </div>
             """, unsafe_allow_html=True)
-        
-        with col3:
-            st.markdown("""
-            <div class="metric-card">
-                <div style="font-size: 2rem; margin-bottom: 1rem;">💪</div>
-                <h4 style="color: #2d3748; margin-bottom: 0.5rem;">Language Strength</h4>
-                <p style="color: #718096; font-size: 0.9rem;">Action verb optimization</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.markdown("""
-            <div class="metric-card">
-                <div style="font-size: 2rem; margin-bottom: 1rem;">📅</div>
-                <h4 style="color: #2d3748; margin-bottom: 0.5rem;">Gap Detection</h4>
-                <p style="color: #718096; font-size: 0.9rem;">Employment history analysis</p>
-            </div>
-            """, unsafe_allow_html=True)
+            
+            job_description = st.text_area(
+                "Paste the job description here",
+                height=200,
+                help="If provided, the analyzer will check for job-specific keywords",
+                placeholder="Paste the job description here to get targeted keyword analysis..."
+            )
+            
+            col_btn1, col_btn2 = st.columns(2)
+            with col_btn1:
+                if st.button("⬅️ Back to Upload", use_container_width=True):
+                    st.session_state.step = 1
+                    st.rerun()
+            
+            with col_btn2:
+                if st.button("🚀 Analyze Resume", type="primary", use_container_width=True):
+                    st.session_state.job_description = job_description
+                    st.session_state.step = 3
+                    st.rerun()
+    
+    elif st.session_state.step == 3:
+        # Step 3: Analysis
+        col1, col2, col3 = st.columns([1, 2, 1])
         
         with col2:
             st.markdown("""
-            <div class="metric-card">
-                <div style="font-size: 2rem; margin-bottom: 1rem;">📏</div>
-                <h4 style="color: #2d3748; margin-bottom: 0.5rem;">Format Check</h4>
-                <p style="color: #718096; font-size: 0.9rem;">Length and structure validation</p>
+            <div style="background: white; padding: 2rem; border-radius: 16px; margin-bottom: 2rem; box-shadow: 0 8px 32px rgba(0,0,0,0.1); text-align: center;">
+                <h2 style="color: #2d3748; margin-top: 0; font-weight: 600; margin-bottom: 1rem;">🔍 Analyzing Your Resume</h2>
+                <p style="color: #718096; font-size: 1rem; margin-bottom: 2rem;">Our AI is analyzing your resume for ATS compatibility...</p>
             </div>
             """, unsafe_allow_html=True)
+            
+            # Enhanced progress bar
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            # Simulate analysis steps with progress
+            import time
+            
+            steps = [
+                ("📄 Parsing resume content...", 20),
+                ("🔍 Extracting keywords...", 40),
+                ("📊 Analyzing achievements...", 60),
+                ("💬 Checking language strength...", 80),
+                ("📋 Generating recommendations...", 100)
+            ]
+            
+            for step_text, progress in steps:
+                status_text.text(step_text)
+                progress_bar.progress(progress)
+                time.sleep(0.5)
+            
+            # Perform actual analysis
+            job_desc = getattr(st.session_state, 'job_description', '')
+            results = analyzer.analyze_resume(st.session_state.resume_text, job_desc)
+            st.session_state.analysis_results = results
+            
+            status_text.text("✅ Analysis complete!")
+            time.sleep(0.5)
+            
+            st.session_state.step = 4
+            st.rerun()
+    
+    elif st.session_state.step == 4:
+        # Step 4: Results with tabs
+        results = st.session_state.analysis_results
+        
+        # Results header
+        st.markdown("""
+        <div style="background: white; padding: 2rem; border-radius: 16px; margin-bottom: 2rem; box-shadow: 0 8px 32px rgba(0,0,0,0.1); text-align: center;">
+            <h2 style="color: #2d3748; margin-top: 0; font-weight: 600; margin-bottom: 1rem;">📊 Analysis Results</h2>
+            <p style="color: #718096; font-size: 1rem; margin-bottom: 0;">Your resume has been analyzed for ATS compatibility</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Score display
+        score = results['score']
+        if score >= 80:
+            score_gradient = "linear-gradient(135deg, #10b981 0%, #059669 100%)"
+            score_emoji = "🎉"
+            score_text = "Excellent"
+        elif score >= 60:
+            score_gradient = "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)"
+            score_emoji = "👍"
+            score_text = "Good"
+        else:
+            score_gradient = "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)"
+            score_emoji = "⚠️"
+            score_text = "Needs Work"
+        
+        st.markdown(f"""
+        <div class="score-card" style="background: {score_gradient}; margin-bottom: 2rem;">
+            <div class="score-label">{score_emoji} ATS Compatibility Score</div>
+            <div class="score-number">{score:.0f}</div>
+            <div class="score-label">{score_text} • Out of 100</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Tabbed interface for results
+        tab1, tab2, tab3, tab4 = st.tabs(["📋 Overview", "⚠️ Issues", "💡 Suggestions", "📊 Details"])
+        
+        with tab1:
+            # Overview tab
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if results['strengths']:
+                    st.markdown("""
+                    <div class="success-card">
+                        <h3 style="margin-top: 0; font-weight: 600;">✅ Strengths Found</h3>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    for strength in results['strengths']:
+                        st.markdown(f"""
+                        <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; border-left: 4px solid #10b981; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                            <span style="color: #065f46; font-weight: 500;">• {strength}</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+            
+            with col2:
+                if results['weaknesses']:
+                    st.markdown("""
+                    <div class="error-card">
+                        <h3 style="margin-top: 0; font-weight: 600;">⚠️ Areas to Improve</h3>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    for weakness in results['weaknesses'][:3]:  # Show top 3
+                        st.markdown(f"""
+                        <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; border-left: 4px solid #ef4444; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                            <span style="color: #dc2626; font-weight: 500;">• {weakness}</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+        
+        with tab2:
+            # Issues tab - detailed weaknesses
+            if results.get('detailed_weaknesses'):
+                for detail in results['detailed_weaknesses']:
+                    severity_badge = {
+                        'High': '<span class="severity-high">🔴 HIGH PRIORITY</span>',
+                        'Medium': '<span class="severity-medium">🟡 MEDIUM</span>', 
+                        'Low': '<span class="severity-low">🟢 LOW</span>'
+                    }.get(detail['severity'], '<span class="severity-medium">⚪ UNKNOWN</span>')
+                    
+                    with st.expander(f"{detail['category']}: {detail['issue']}", expanded=True):
+                        st.markdown(severity_badge, unsafe_allow_html=True)
+                        st.write(f"**Issue:** {detail['details']}")
+                        
+                        # Show specific examples based on category
+                        if detail['category'] == 'Keywords' and 'missing_items' in detail:
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                st.write("**❌ Missing Keywords:**")
+                                for keyword in detail['missing_items'][:10]:
+                                    st.write(f"• {keyword}")
+                            with col2:
+                                if detail['found_items']:
+                                    st.write("**✅ Found Keywords:**")
+                                    for keyword in detail['found_items'][:8]:
+                                        st.write(f"• {keyword}")
+                        
+                        elif detail['category'] == 'Achievement Quantification':
+                            if detail.get('unquantified_examples'):
+                                st.write("**📝 Statements needing quantification:**")
+                                for example in detail['unquantified_examples']:
+                                    st.write(f"• {example[:100]}...")
+                            
+                            if detail.get('improvement_examples'):
+                                st.write("**💡 How to improve:**")
+                                for example in detail['improvement_examples']:
+                                    st.write(f"• {example}")
+                        
+                        elif detail['category'] == 'Language Strength':
+                            if detail.get('weak_examples'):
+                                st.write("**❌ Weak phrases found:**")
+                                for example in detail['weak_examples']:
+                                    st.write(f"• {example[:80]}...")
+                            
+                            if detail.get('replacements'):
+                                st.write("**✅ Suggested improvements:**")
+                                for replacement in detail['replacements']:
+                                    st.write(f"• {replacement}")
+        
+        with tab3:
+            # Suggestions tab
+            if results['suggestions']:
+                st.markdown("""
+                <div class="info-card">
+                    <h3 style="margin-top: 0; font-weight: 600; color: #2d3748;">💡 Action Plan</h3>
+                    <p style="margin-bottom: 0; color: #4a5568;">Priority improvements to boost your ATS score</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                for i, suggestion in enumerate(results['suggestions'], 1):
+                    st.markdown(f"""
+                    <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; border-left: 4px solid #3182ce; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        <span style="color: #2b6cb0; font-weight: 500;">{i}. {suggestion}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+        
+        with tab4:
+            # Details tab
+            st.subheader("Resume Sections Detected")
+            sections = analyzer.extract_sections(st.session_state.resume_text)
+            
+            for section_name, section_content in sections.items():
+                if section_content.strip():
+                    st.write(f"**{section_name.title()}:** ✅")
+                else:
+                    st.write(f"**{section_name.title()}:** ❌ Not detected")
+            
+            st.subheader("Resume Preview")
+            st.text_area("Extracted Text", st.session_state.resume_text[:1000] + "..." if len(st.session_state.resume_text) > 1000 else st.session_state.resume_text, height=200)
+        
+        # Action buttons
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if st.button("🔄 Analyze Another Resume", use_container_width=True):
+                # Reset session state
+                st.session_state.step = 1
+                st.session_state.resume_text = None
+                st.session_state.analysis_results = None
+                st.rerun()
+        
+        with col2:
+            if st.button("📥 Download Report", use_container_width=True):
+                st.info("📥 Download feature coming soon!")
         
         with col3:
-            st.markdown("""
-            <div class="metric-card">
-                <div style="font-size: 2rem; margin-bottom: 1rem;">📞</div>
-                <h4 style="color: #2d3748; margin-bottom: 0.5rem;">Contact Info</h4>
-                <p style="color: #718096; font-size: 0.9rem;">Professional details check</p>
-            </div>
-            """, unsafe_allow_html=True)
+            if st.button("📤 Share Results", use_container_width=True):
+                st.info("📤 Share feature coming soon!")
     
     # Developer credit footer
     st.markdown("---")
