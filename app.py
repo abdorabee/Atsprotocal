@@ -49,6 +49,47 @@ class ResumeAnalyzer:
         self.nlp = load_spacy_model()
         self.stop_words = set(stopwords.words('english'))
         
+        # Resume validation patterns
+        self.resume_indicators = {
+            'section_headers': [
+                'experience', 'work experience', 'professional experience', 'employment', 'work history',
+                'education', 'academic background', 'qualifications', 'degrees', 'academic',
+                'skills', 'technical skills', 'core competencies', 'abilities', 'expertise',
+                'summary', 'profile', 'objective', 'about me', 'career summary', 'overview',
+                'contact', 'contact information', 'personal details', 'personal information',
+                'projects', 'achievements', 'accomplishments', 'awards', 'honors',
+                'certifications', 'licenses', 'training', 'courses', 'professional development',
+                'languages', 'interests', 'hobbies', 'volunteer', 'references'
+            ],
+            'contact_patterns': [
+                r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',  # Email
+                r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b',  # Phone
+                r'\b(?:linkedin\.com|github\.com|portfolio)\b',  # Professional links
+            ],
+            'date_patterns': [
+                r'\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{4}\b',
+                r'\b\d{1,2}/\d{4}\b',
+                r'\b\d{4}\s*-\s*\d{4}\b',
+                r'\b\d{4}\s*-\s*present\b',
+                r'\bpresent\b'
+            ],
+            'action_verbs': [
+                'managed', 'led', 'developed', 'created', 'implemented', 'designed',
+                'achieved', 'improved', 'increased', 'reduced', 'optimized',
+                'coordinated', 'supervised', 'executed', 'delivered', 'built',
+                'organized', 'planned', 'analyzed', 'collaborated', 'maintained',
+                'established', 'initiated', 'facilitated', 'supported', 'assisted',
+                'worked', 'performed', 'completed', 'handled', 'processed'
+            ],
+            'degree_indicators': [
+                'bachelor', 'master', 'phd', 'doctorate', 'degree', 'diploma',
+                'certificate', 'certification', 'university', 'college', 'school',
+                'b.s.', 'm.s.', 'b.a.', 'm.a.', 'mba', 'gpa', 'graduate',
+                'undergraduate', 'major', 'minor', 'honors', 'cum laude',
+                'institute', 'academy', 'high school', 'secondary'
+            ]
+        }
+        
         # Common ATS keywords for fallback when no job description is provided
         self.default_keywords = {
             'technical': ['python', 'java', 'sql', 'javascript', 'html', 'css', 'react', 'node.js', 
@@ -265,6 +306,131 @@ class ResumeAnalyzer:
                     break
         
         return weak_phrases
+
+    def validate_resume(self, text):
+        """Validate if the uploaded document is actually a resume"""
+        text_lower = text.lower()
+        validation_score = 0
+        validation_details = {
+            'is_resume': False,
+            'confidence': 0,
+            'found_indicators': [],
+            'missing_indicators': [],
+            'suggestions': []
+        }
+        
+        # Check for section headers (30 points max)
+        section_score = 0
+        found_sections = []
+        for section in self.resume_indicators['section_headers']:
+            if section in text_lower:
+                section_score += 1.5
+                found_sections.append(section)
+                if section_score >= 30:
+                    break
+        validation_score += min(section_score, 30)
+        
+        # Check for contact information (20 points max)
+        contact_score = 0
+        found_contacts = []
+        for pattern in self.resume_indicators['contact_patterns']:
+            if re.search(pattern, text, re.IGNORECASE):
+                contact_score += 7
+                found_contacts.append("contact info")
+        validation_score += min(contact_score, 20)
+        
+        # Check for date patterns (15 points max)
+        date_score = 0
+        found_dates = []
+        for pattern in self.resume_indicators['date_patterns']:
+            matches = re.findall(pattern, text_lower)
+            if matches:
+                date_score += len(matches) * 2
+                found_dates.extend(matches[:3])  # Limit to first 3
+        validation_score += min(date_score, 15)
+        
+        # Check for action verbs (20 points max)
+        action_score = 0
+        found_actions = []
+        for verb in self.resume_indicators['action_verbs']:
+            if verb in text_lower:
+                action_score += 0.8
+                found_actions.append(verb)
+        validation_score += min(action_score, 20)
+        
+        # Check for education indicators (15 points max)
+        education_score = 0
+        found_education = []
+        for indicator in self.resume_indicators['degree_indicators']:
+            if indicator in text_lower:
+                education_score += 1
+                found_education.append(indicator)
+        validation_score += min(education_score, 15)
+        
+        # Calculate confidence percentage
+        confidence = min(validation_score, 100)
+        
+        # Add bonus points for common resume patterns
+        bonus_score = 0
+        
+        # Check for name patterns (likely at the top)
+        lines = text.split('\n')[:5]  # Check first 5 lines
+        for line in lines:
+            line = line.strip()
+            if len(line.split()) == 2 and line.replace(' ', '').isalpha() and len(line) > 5:
+                bonus_score += 5
+                break
+        
+        # Check for job titles
+        job_titles = ['manager', 'engineer', 'developer', 'analyst', 'coordinator', 
+                     'specialist', 'director', 'assistant', 'associate', 'consultant',
+                     'administrator', 'supervisor', 'lead', 'senior', 'junior']
+        for title in job_titles:
+            if title in text_lower:
+                bonus_score += 2
+                break
+        
+        # Check for company indicators
+        company_words = ['company', 'corporation', 'inc', 'llc', 'ltd', 'group', 'solutions']
+        for word in company_words:
+            if word in text_lower:
+                bonus_score += 2
+                break
+        
+        validation_score += min(bonus_score, 15)
+        confidence = min(validation_score, 100)
+        
+        # Lower threshold for resume detection
+        is_resume = confidence >= 45
+        
+        # Populate validation details
+        validation_details['is_resume'] = is_resume
+        validation_details['confidence'] = confidence
+        validation_details['found_indicators'] = {
+            'sections': found_sections[:5],
+            'contact': found_contacts,
+            'dates': found_dates[:3],
+            'action_verbs': found_actions[:5],
+            'education': found_education[:3]
+        }
+        
+        # Generate suggestions for improvement
+        if confidence < 45:
+            suggestions = []
+            if section_score < 15:
+                suggestions.append("Add clear section headers like 'Experience', 'Education', 'Skills'")
+            if contact_score < 10:
+                suggestions.append("Include complete contact information (email, phone number)")
+            if date_score < 6:
+                suggestions.append("Add employment dates and education timeline")
+            if action_score < 8:
+                suggestions.append("Use strong action verbs to describe your experience")
+            if education_score < 5:
+                suggestions.append("Include education background and qualifications")
+            
+            validation_details['suggestions'] = suggestions
+        
+        return validation_details
 
     def analyze_resume(self, resume_text, job_description=None):
         """Main analysis function"""
@@ -731,16 +897,98 @@ def main():
                         st.session_state.resume_text = resume_text
                     
                     if resume_text.strip():
-                        # Show preview
-                        with st.expander("📖 Resume Preview", expanded=False):
-                            preview_text = resume_text[:500] + "..." if len(resume_text) > 500 else resume_text
-                            st.text_area("Extracted Text Preview", preview_text, height=150, disabled=True)
-                            st.info(f"Total words extracted: {len(resume_text.split())}")
+                        # Validate if it's actually a resume
+                        with st.spinner("🔍 Validating resume content..."):
+                            validation = analyzer.validate_resume(resume_text)
                         
-                        # Next step button
-                        if st.button("➡️ Continue to Job Details", type="primary", use_container_width=True):
-                            st.session_state.step = 2
-                            st.rerun()
+                        # Display validation results
+                        if validation['is_resume']:
+                            st.success(f"✅ Resume validated! Confidence: {validation['confidence']:.0f}%")
+                            
+                            # Show what was found
+                            if validation['found_indicators']:
+                                with st.expander("🔍 Validation Details", expanded=False):
+                                    col1, col2 = st.columns(2)
+                                    
+                                    with col1:
+                                        if validation['found_indicators']['sections']:
+                                            st.write("**📋 Sections Found:**")
+                                            for section in validation['found_indicators']['sections']:
+                                                st.write(f"• {section.title()}")
+                                        
+                                        if validation['found_indicators']['action_verbs']:
+                                            st.write("**💪 Action Verbs Found:**")
+                                            for verb in validation['found_indicators']['action_verbs']:
+                                                st.write(f"• {verb}")
+                                    
+                                    with col2:
+                                        if validation['found_indicators']['contact']:
+                                            st.write("**📞 Contact Info:** ✅")
+                                        
+                                        if validation['found_indicators']['dates']:
+                                            st.write("**📅 Dates Found:**")
+                                            for date in validation['found_indicators']['dates']:
+                                                st.write(f"• {date}")
+                                        
+                                        if validation['found_indicators']['education']:
+                                            st.write("**🎓 Education Keywords:**")
+                                            for edu in validation['found_indicators']['education']:
+                                                st.write(f"• {edu}")
+                            
+                            # Show preview
+                            with st.expander("📖 Resume Preview", expanded=False):
+                                preview_text = resume_text[:500] + "..." if len(resume_text) > 500 else resume_text
+                                st.text_area("Extracted Text Preview", preview_text, height=150, disabled=True)
+                                st.info(f"Total words extracted: {len(resume_text.split())}")
+                            
+                            # Next step button
+                            if st.button("➡️ Continue to Job Details", type="primary", use_container_width=True):
+                                st.session_state.step = 2
+                                st.rerun()
+                        
+                        else:
+                            # Not a valid resume
+                            st.error(f"⚠️ This doesn't appear to be a resume (Confidence: {validation['confidence']:.0f}%)")
+                            
+                            st.markdown("""
+                            <div style="background: #fef2f2; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #ef4444; margin: 1rem 0;">
+                                <h4 style="color: #dc2626; margin-top: 0;">❌ Document Validation Failed</h4>
+                                <p style="color: #7f1d1d; margin-bottom: 0;">The uploaded file doesn't contain typical resume elements. Please upload a proper resume document.</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            # Show what's missing and suggestions
+                            if validation['suggestions']:
+                                st.write("**💡 To make this a valid resume, consider adding:**")
+                                for suggestion in validation['suggestions']:
+                                    st.write(f"• {suggestion}")
+                            
+                            # Show what was found (if any)
+                            if any(validation['found_indicators'].values()):
+                                with st.expander("🔍 What We Found", expanded=False):
+                                    found_something = False
+                                    for category, items in validation['found_indicators'].items():
+                                        if items:
+                                            found_something = True
+                                            st.write(f"**{category.title()}:** {', '.join(map(str, items[:3]))}")
+                                    
+                                    if not found_something:
+                                        st.write("No typical resume elements were detected.")
+                            
+                            # Option to continue anyway
+                            st.warning("⚠️ You can still continue, but the analysis may not be accurate for non-resume documents.")
+                            
+                            col_force1, col_force2 = st.columns(2)
+                            with col_force1:
+                                if st.button("🔄 Upload Different File", use_container_width=True):
+                                    st.session_state.resume_text = None
+                                    st.rerun()
+                            
+                            with col_force2:
+                                if st.button("➡️ Continue Anyway", type="secondary", use_container_width=True):
+                                    st.session_state.step = 2
+                                    st.rerun()
+                    
                     else:
                         st.error("❌ No text could be extracted from the file. Please check if the file is valid.")
                         
