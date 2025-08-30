@@ -432,7 +432,7 @@ def main():
         page_title="Resume ATS Analyzer",
         page_icon="🚀",
         layout="wide",
-        initial_sidebar_state="expanded"
+        initial_sidebar_state="collapsed"
     )
     
     # Custom CSS for Material Design styling
@@ -645,11 +645,14 @@ def main():
     if analyzer.nlp is None:
         st.stop()
     
-    # Modern sidebar for inputs
-    with st.sidebar:
+    # Centered upload section
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
         st.markdown("""
-        <div style="background: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
-            <h3 style="color: #2d3748; margin-top: 0; font-weight: 600;">📤 Upload Resume</h3>
+        <div style="background: white; padding: 2rem; border-radius: 16px; margin-bottom: 2rem; box-shadow: 0 8px 32px rgba(0,0,0,0.1); text-align: center;">
+            <h2 style="color: #2d3748; margin-top: 0; font-weight: 600; margin-bottom: 1rem;">📤 Upload Your Resume</h2>
+            <p style="color: #718096; font-size: 1rem; margin-bottom: 2rem;">Get instant AI-powered analysis and improvement suggestions</p>
         </div>
         """, unsafe_allow_html=True)
         
@@ -660,9 +663,9 @@ def main():
         )
         
         st.markdown("""
-        <div style="background: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; margin-top: 1.5rem; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
-            <h3 style="color: #2d3748; margin-top: 0; font-weight: 600;">💼 Job Description</h3>
-            <p style="color: #718096; font-size: 0.9rem; margin-bottom: 1rem;">Optional: Paste job description for targeted analysis</p>
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; margin-top: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
+            <h3 style="color: #2d3748; margin-top: 0; font-weight: 600; text-align: center;">💼 Job Description (Optional)</h3>
+            <p style="color: #718096; font-size: 0.9rem; margin-bottom: 1rem; text-align: center;">Paste job description for targeted keyword analysis</p>
         </div>
         """, unsafe_allow_html=True)
         
@@ -694,9 +697,7 @@ def main():
                 return
             
             # Modern analyze button
-            st.markdown("<div style='text-align: center; margin: 2rem 0;'>", unsafe_allow_html=True)
-            if st.button("🚀 Analyze My Resume", type="primary"):
-                st.markdown("</div>", unsafe_allow_html=True)
+            if st.button("🚀 Analyze My Resume", type="primary", use_container_width=True):
                 with st.spinner("Analyzing resume..."):
                     results = analyzer.analyze_resume(resume_text, job_description)
                 
@@ -883,18 +884,8 @@ def main():
             st.error(f"An error occurred while processing your resume: {str(e)}")
     
     else:
-        # Modern welcome screen
-        col1, col2, col3 = st.columns([1, 2, 1])
-        
-        with col2:
-            st.markdown("""
-            <div style="text-align: center; padding: 3rem 2rem; background: white; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); margin: 2rem 0;">
-                <div style="font-size: 4rem; margin-bottom: 1rem;">📄</div>
-                <h2 style="color: #2d3748; margin-bottom: 1rem; font-weight: 600;">Ready to Optimize Your Resume?</h2>
-                <p style="color: #718096; font-size: 1.1rem; margin-bottom: 2rem;">Upload your resume using the sidebar to get started with AI-powered analysis</p>
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 0.75rem 1.5rem; border-radius: 8px; display: inline-block; font-weight: 600;">👈 Start Here</div>
-            </div>
-            """, unsafe_allow_html=True)
+        # Show feature cards below upload section when no file is uploaded
+        pass
         
         # Feature cards
         st.markdown("### ✨ What We Analyze")
