@@ -956,6 +956,30 @@ def main():
                 <p style="color: #718096; font-size: 0.9rem;">Professional details check</p>
             </div>
             """, unsafe_allow_html=True)
+    
+    # Developer credit footer
+    st.markdown("---")
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2rem; border-radius: 16px; margin-top: 3rem; text-align: center; color: white;">
+        <h3 style="margin-top: 0; font-weight: 600; color: white;">👨‍💻 Built by Abdel-Rahaman Rabee</h3>
+        <p style="margin-bottom: 1rem; opacity: 0.9; font-size: 1.1rem;">Software Engineer</p>
+        <div style="display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 1.2rem;">📧</span>
+                <a href="mailto:abdelrahamanrabee1134@gmail.com" style="color: white; text-decoration: none; font-weight: 500;">abdelrahamanrabee1134@gmail.com</a>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 1.2rem;">🐙</span>
+                <a href="https://github.com/abdorabee" target="_blank" style="color: white; text-decoration: none; font-weight: 500;">github.com/abdorabee</a>
+            </div>
+        </div>
+        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.2);">
+            <p style="margin: 0; opacity: 0.8; font-size: 0.9rem;">
+                🚀 This ATS Resume Analyzer demonstrates expertise in Python, AI/ML, NLP, and modern web development
+            </p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
