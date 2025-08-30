@@ -273,6 +273,7 @@ class ResumeAnalyzer:
         analysis_results = {
             'strengths': [],
             'weaknesses': [],
+            'detailed_weaknesses': [],  # New: detailed breakdown
             'suggestions': [],
             'score': 0
         }
@@ -294,6 +295,14 @@ class ResumeAnalyzer:
             if match_percentage < 70:
                 missing_keywords = set(target_keywords) - set(resume_keywords)
                 analysis_results['weaknesses'].append(f"Low keyword match ({match_percentage:.1f}%)")
+                analysis_results['detailed_weaknesses'].append({
+                    'category': 'Keywords',
+                    'issue': f'Missing {len(missing_keywords)} important keywords',
+                    'details': f'Your resume matches only {match_percentage:.1f}% of job requirements',
+                    'missing_items': list(missing_keywords)[:15],
+                    'found_items': list(matched_keywords)[:10],
+                    'severity': 'High' if match_percentage < 50 else 'Medium'
+                })
                 analysis_results['suggestions'].append(
                     f"Add relevant keywords to your resume: {', '.join(list(missing_keywords)[:10])}"
                 )
@@ -304,6 +313,14 @@ class ResumeAnalyzer:
         gaps = self.detect_employment_gaps(sections['experience'])
         if gaps:
             analysis_results['weaknesses'].extend(gaps)
+            analysis_results['detailed_weaknesses'].append({
+                'category': 'Employment History',
+                'issue': f'Employment gaps detected ({len(gaps)} gap(s))',
+                'details': 'Gaps in employment history may raise questions for recruiters',
+                'gap_details': gaps,
+                'severity': 'Medium',
+                'recommendation': 'Explain activities during gaps (education, projects, volunteering)'
+            })
             analysis_results['suggestions'].append(
                 "Address employment gaps by explaining what you did during those periods (education, freelancing, volunteering, etc.)"
             )
@@ -312,6 +329,19 @@ class ResumeAnalyzer:
         quantified, unquantified = self.check_quantification(sections['experience'])
         if len(unquantified) > len(quantified):
             analysis_results['weaknesses'].append("Lack of quantified achievements")
+            analysis_results['detailed_weaknesses'].append({
+                'category': 'Achievement Quantification',
+                'issue': f'{len(unquantified)} unquantified statements found',
+                'details': f'Only {len(quantified)} out of {len(quantified) + len(unquantified)} statements include metrics',
+                'unquantified_examples': unquantified[:5],
+                'quantified_examples': quantified[:3] if quantified else [],
+                'severity': 'High' if len(quantified) == 0 else 'Medium',
+                'improvement_examples': [
+                    "'Managed team' → 'Managed team of 8 developers'",
+                    "'Increased sales' → 'Increased sales by 25% over 6 months'",
+                    "'Improved efficiency' → 'Reduced processing time by 40%'"
+                ]
+            })
             analysis_results['suggestions'].append(
                 "Add numbers and metrics to your achievements. Example: 'Managed team' → 'Managed team of 5, increasing productivity by 20%'"
             )
@@ -322,6 +352,19 @@ class ResumeAnalyzer:
         weak_phrases = self.detect_weak_language(sections['experience'])
         if weak_phrases:
             analysis_results['weaknesses'].append("Weak action verbs detected")
+            analysis_results['detailed_weaknesses'].append({
+                'category': 'Language Strength',
+                'issue': f'{len(weak_phrases)} weak phrases found',
+                'details': 'Weak language reduces impact and shows passive involvement',
+                'weak_examples': weak_phrases[:5],
+                'strong_alternatives': self.strong_verbs[:8],
+                'severity': 'Medium',
+                'replacements': [
+                    "'Responsible for managing' → 'Led and managed'",
+                    "'Helped with projects' → 'Delivered 3 key projects'",
+                    "'Worked on team' → 'Collaborated with cross-functional team'"
+                ]
+            })
             analysis_results['suggestions'].append(
                 f"Replace weak phrases with strong action verbs. Use words like: {', '.join(self.strong_verbs[:5])}"
             )
@@ -330,17 +373,52 @@ class ResumeAnalyzer:
         word_count = len(clean_text.split())
         if word_count < 200:
             analysis_results['weaknesses'].append("Resume too short")
+            analysis_results['detailed_weaknesses'].append({
+                'category': 'Resume Length',
+                'issue': f'Resume is too short ({word_count} words)',
+                'details': 'Short resumes may not provide enough information about your qualifications',
+                'current_length': f'{word_count} words',
+                'recommended_length': '300-600 words (1-2 pages)',
+                'severity': 'Medium',
+                'areas_to_expand': ['Work experience details', 'Achievement descriptions', 'Skills elaboration', 'Project outcomes']
+            })
             analysis_results['suggestions'].append("Expand your resume with more details about your experience and achievements")
         elif word_count > 800:
             analysis_results['weaknesses'].append("Resume too long")
+            analysis_results['detailed_weaknesses'].append({
+                'category': 'Resume Length',
+                'issue': f'Resume is too long ({word_count} words)',
+                'details': 'Long resumes may lose recruiter attention and fail ATS parsing',
+                'current_length': f'{word_count} words',
+                'recommended_length': '300-600 words (1-2 pages)',
+                'severity': 'Medium',
+                'areas_to_condense': ['Remove outdated experience', 'Combine similar roles', 'Shorten bullet points', 'Remove irrelevant skills']
+            })
             analysis_results['suggestions'].append("Condense your resume to 1-2 pages, focusing on most relevant experience")
         else:
             analysis_results['strengths'].append("Appropriate resume length")
         
         # Contact information check
-        if not re.search(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', clean_text):
-            analysis_results['weaknesses'].append("No email address found")
-            analysis_results['suggestions'].append("Include a professional email address in your contact information")
+        email_found = re.search(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', clean_text)
+        phone_found = re.search(r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b', clean_text)
+        
+        missing_contact = []
+        if not email_found:
+            missing_contact.append('email address')
+        if not phone_found:
+            missing_contact.append('phone number')
+            
+        if missing_contact:
+            analysis_results['weaknesses'].append(f"Missing contact information: {', '.join(missing_contact)}")
+            analysis_results['detailed_weaknesses'].append({
+                'category': 'Contact Information',
+                'issue': f'Missing {len(missing_contact)} contact detail(s)',
+                'details': 'Complete contact information is essential for recruiters to reach you',
+                'missing_items': missing_contact,
+                'severity': 'High',
+                'required_items': ['Professional email', 'Phone number', 'LinkedIn profile (recommended)', 'City, State']
+            })
+            analysis_results['suggestions'].append("Include complete contact information: professional email, phone number, and LinkedIn profile")
         
         # Calculate overall score
         total_checks = 6  # Number of different checks we perform
@@ -436,11 +514,95 @@ def main():
                         for strength in results['strengths']:
                             st.write(f"• {strength}")
                     
-                    # Weaknesses
+                    # Weaknesses with detailed breakdown
                     if results['weaknesses']:
                         st.error("⚠️ **Areas for Improvement**")
-                        for weakness in results['weaknesses']:
-                            st.write(f"• {weakness}")
+                        
+                        # Show detailed weaknesses if available
+                        if results.get('detailed_weaknesses'):
+                            for detail in results['detailed_weaknesses']:
+                                severity_color = {
+                                    'High': '🔴',
+                                    'Medium': '🟡', 
+                                    'Low': '🟢'
+                                }.get(detail['severity'], '⚪')
+                                
+                                with st.expander(f"{severity_color} {detail['category']}: {detail['issue']}", expanded=True):
+                                    st.write(f"**Issue:** {detail['details']}")
+                                    
+                                    # Show specific examples based on category
+                                    if detail['category'] == 'Keywords' and 'missing_items' in detail:
+                                        col1, col2 = st.columns(2)
+                                        with col1:
+                                            st.write("**❌ Missing Keywords:**")
+                                            for keyword in detail['missing_items'][:10]:
+                                                st.write(f"• {keyword}")
+                                        with col2:
+                                            if detail['found_items']:
+                                                st.write("**✅ Found Keywords:**")
+                                                for keyword in detail['found_items'][:8]:
+                                                    st.write(f"• {keyword}")
+                                    
+                                    elif detail['category'] == 'Achievement Quantification':
+                                        if detail.get('unquantified_examples'):
+                                            st.write("**📝 Statements needing quantification:**")
+                                            for example in detail['unquantified_examples']:
+                                                st.write(f"• {example[:100]}...")
+                                        
+                                        if detail.get('improvement_examples'):
+                                            st.write("**💡 How to improve:**")
+                                            for example in detail['improvement_examples']:
+                                                st.write(f"• {example}")
+                                    
+                                    elif detail['category'] == 'Language Strength':
+                                        if detail.get('weak_examples'):
+                                            st.write("**❌ Weak phrases found:**")
+                                            for example in detail['weak_examples']:
+                                                st.write(f"• {example[:80]}...")
+                                        
+                                        if detail.get('replacements'):
+                                            st.write("**✅ Suggested improvements:**")
+                                            for replacement in detail['replacements']:
+                                                st.write(f"• {replacement}")
+                                    
+                                    elif detail['category'] == 'Employment History':
+                                        if detail.get('gap_details'):
+                                            st.write("**📅 Gaps detected:**")
+                                            for gap in detail['gap_details']:
+                                                st.write(f"• {gap}")
+                                        if detail.get('recommendation'):
+                                            st.info(f"💡 **Recommendation:** {detail['recommendation']}")
+                                    
+                                    elif detail['category'] == 'Resume Length':
+                                        col1, col2 = st.columns(2)
+                                        with col1:
+                                            st.metric("Current Length", detail.get('current_length', 'Unknown'))
+                                        with col2:
+                                            st.metric("Recommended", detail.get('recommended_length', '300-600 words'))
+                                        
+                                        if detail.get('areas_to_expand'):
+                                            st.write("**📈 Areas to expand:**")
+                                            for area in detail['areas_to_expand']:
+                                                st.write(f"• {area}")
+                                        elif detail.get('areas_to_condense'):
+                                            st.write("**📉 Areas to condense:**")
+                                            for area in detail['areas_to_condense']:
+                                                st.write(f"• {area}")
+                                    
+                                    elif detail['category'] == 'Contact Information':
+                                        if detail.get('missing_items'):
+                                            st.write("**❌ Missing information:**")
+                                            for item in detail['missing_items']:
+                                                st.write(f"• {item.title()}")
+                                        
+                                        if detail.get('required_items'):
+                                            st.write("**✅ Complete contact info should include:**")
+                                            for item in detail['required_items']:
+                                                st.write(f"• {item}")
+                        else:
+                            # Fallback to simple list if no detailed breakdown
+                            for weakness in results['weaknesses']:
+                                st.write(f"• {weakness}")
                     
                     # Suggestions
                     if results['suggestions']:
