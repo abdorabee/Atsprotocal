@@ -966,7 +966,7 @@ def main():
         </div>
         <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.2);">
             <p style="margin: 0; opacity: 0.8; font-size: 0.9rem;">
-                🚀 This ATS Resume Analyzer demonstrates expertise in Python, AI/ML, NLP, and modern web development
+                Trust the process
             </p>
         </div>
     </div>
