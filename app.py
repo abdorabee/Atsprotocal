@@ -429,13 +429,215 @@ class ResumeAnalyzer:
 
 def main():
     st.set_page_config(
-        page_title="Resume ATS Analyzer MVP",
-        page_icon="📄",
-        layout="wide"
+        page_title="Resume ATS Analyzer",
+        page_icon="🚀",
+        layout="wide",
+        initial_sidebar_state="expanded"
     )
     
-    st.title("📄 Resume ATS Analyzer MVP")
-    st.markdown("Upload your resume and get instant feedback on ATS compatibility and improvement suggestions.")
+    # Custom CSS for Material Design styling
+    st.markdown("""
+    <style>
+    /* Import Google Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    /* Global Styles */
+    .main {
+        padding-top: 2rem;
+    }
+    
+    /* Custom font */
+    html, body, [class*="css"] {
+        font-family: 'Inter', sans-serif;
+    }
+    
+    /* Header styling */
+    .main-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem;
+        border-radius: 16px;
+        margin-bottom: 2rem;
+        box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
+    }
+    
+    .main-title {
+        color: white;
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+        text-align: center;
+    }
+    
+    .main-subtitle {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1.1rem;
+        font-weight: 400;
+        text-align: center;
+        margin-top: 0.5rem;
+    }
+    
+    /* Card styling */
+    .metric-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+    
+    .score-card {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(240, 147, 251, 0.3);
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .score-number {
+        font-size: 3rem;
+        font-weight: 700;
+        margin: 0.5rem 0;
+    }
+    
+    .score-label {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        font-weight: 500;
+    }
+    
+    /* Success/Error/Info cards */
+    .success-card {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 16px rgba(79, 172, 254, 0.2);
+    }
+    
+    .error-card {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 16px rgba(250, 112, 154, 0.2);
+    }
+    
+    .info-card {
+        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        color: #2d3748;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 16px rgba(168, 237, 234, 0.2);
+    }
+    
+    /* Sidebar styling */
+    .css-1d391kg {
+        background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+    }
+    
+    /* Upload area styling */
+    .upload-section {
+        background: white;
+        padding: 2rem;
+        border-radius: 16px;
+        border: 2px dashed #e2e8f0;
+        text-align: center;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .upload-section:hover {
+        border-color: #667eea;
+        background: #f8fafc;
+    }
+    
+    /* Button styling */
+    .stButton > button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        font-size: 1rem;
+        box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+        transition: all 0.3s ease;
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    /* Expander styling */
+    .streamlit-expanderHeader {
+        background: white;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        font-weight: 600;
+    }
+    
+    /* Severity indicators */
+    .severity-high {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: inline-block;
+        margin-bottom: 0.5rem;
+    }
+    
+    .severity-medium {
+        background: linear-gradient(135deg, #feca57 0%, #ff9ff3 100%);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: inline-block;
+        margin-bottom: 0.5rem;
+    }
+    
+    .severity-low {
+        background: linear-gradient(135deg, #48dbfb 0%, #0abde3 100%);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: inline-block;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Hide Streamlit branding */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
+    /* Custom spacing */
+    .block-container {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Modern header
+    st.markdown("""
+    <div class="main-header">
+        <h1 class="main-title">🚀 Resume ATS Analyzer</h1>
+        <p class="main-subtitle">AI-powered resume optimization for modern job seekers</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Initialize analyzer
     analyzer = ResumeAnalyzer()
@@ -443,20 +645,32 @@ def main():
     if analyzer.nlp is None:
         st.stop()
     
-    # Sidebar for inputs
+    # Modern sidebar for inputs
     with st.sidebar:
-        st.header("📤 Upload Resume")
+        st.markdown("""
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
+            <h3 style="color: #2d3748; margin-top: 0; font-weight: 600;">📤 Upload Resume</h3>
+        </div>
+        """, unsafe_allow_html=True)
+        
         uploaded_file = st.file_uploader(
             "Choose your resume file",
             type=['pdf', 'txt'],
             help="Upload a PDF or text file (max 5MB)"
         )
         
-        st.header("💼 Job Description (Optional)")
+        st.markdown("""
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; margin-top: 1.5rem; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
+            <h3 style="color: #2d3748; margin-top: 0; font-weight: 600;">💼 Job Description</h3>
+            <p style="color: #718096; font-size: 0.9rem; margin-bottom: 1rem;">Optional: Paste job description for targeted analysis</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
         job_description = st.text_area(
-            "Paste the job description here to get targeted keyword analysis",
+            "Job description",
             height=150,
-            help="If provided, the analyzer will check for job-specific keywords"
+            help="If provided, the analyzer will check for job-specific keywords",
+            label_visibility="collapsed"
         )
     
     # Main content area
@@ -479,8 +693,10 @@ def main():
                 st.error("No text could be extracted from the file. Please check if the file is valid.")
                 return
             
-            # Analyze button
-            if st.button("🔍 Analyze Resume", type="primary"):
+            # Modern analyze button
+            st.markdown("<div style='text-align: center; margin: 2rem 0;'>", unsafe_allow_html=True)
+            if st.button("🚀 Analyze My Resume", type="primary"):
+                st.markdown("</div>", unsafe_allow_html=True)
                 with st.spinner("Analyzing resume..."):
                     results = analyzer.analyze_resume(resume_text, job_description)
                 
@@ -488,31 +704,44 @@ def main():
                 col1, col2 = st.columns([2, 1])
                 
                 with col2:
-                    # Score display
+                    # Modern score display
                     score = results['score']
                     if score >= 80:
-                        score_color = "green"
-                        score_emoji = "🟢"
+                        score_gradient = "linear-gradient(135deg, #10b981 0%, #059669 100%)"
+                        score_emoji = "🎉"
+                        score_text = "Excellent"
                     elif score >= 60:
-                        score_color = "orange"
-                        score_emoji = "🟡"
+                        score_gradient = "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)"
+                        score_emoji = "👍"
+                        score_text = "Good"
                     else:
-                        score_color = "red"
-                        score_emoji = "🔴"
+                        score_gradient = "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)"
+                        score_emoji = "⚠️"
+                        score_text = "Needs Work"
                     
                     st.markdown(f"""
-                    <div style="text-align: center; padding: 20px; border: 2px solid {score_color}; border-radius: 10px;">
-                        <h2>{score_emoji} Overall Score</h2>
-                        <h1 style="color: {score_color};">{score:.0f}/100</h1>
+                    <div class="score-card" style="background: {score_gradient};">
+                        <div class="score-label">{score_emoji} ATS Compatibility</div>
+                        <div class="score-number">{score:.0f}</div>
+                        <div class="score-label">{score_text} • Out of 100</div>
                     </div>
                     """, unsafe_allow_html=True)
                 
                 with col1:
-                    # Strengths
+                    # Modern strengths display
                     if results['strengths']:
-                        st.success("✅ **Strengths Found**")
+                        st.markdown("""
+                        <div class="success-card">
+                            <h3 style="margin-top: 0; font-weight: 600;">✅ Strengths Found</h3>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
                         for strength in results['strengths']:
-                            st.write(f"• {strength}")
+                            st.markdown(f"""
+                            <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; border-left: 4px solid #10b981; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                                <span style="color: #065f46; font-weight: 500;">• {strength}</span>
+                            </div>
+                            """, unsafe_allow_html=True)
                     
                     # Weaknesses with detailed breakdown
                     if results['weaknesses']:
@@ -520,14 +749,22 @@ def main():
                         
                         # Show detailed weaknesses if available
                         if results.get('detailed_weaknesses'):
+                            st.markdown("""
+                            <div class="error-card">
+                                <h3 style="margin-top: 0; font-weight: 600;">⚠️ Areas for Improvement</h3>
+                                <p style="margin-bottom: 0; opacity: 0.9;">Click each section below for detailed analysis and specific recommendations</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
                             for detail in results['detailed_weaknesses']:
-                                severity_color = {
-                                    'High': '🔴',
-                                    'Medium': '🟡', 
-                                    'Low': '🟢'
-                                }.get(detail['severity'], '⚪')
+                                severity_badge = {
+                                    'High': '<span class="severity-high">🔴 HIGH PRIORITY</span>',
+                                    'Medium': '<span class="severity-medium">🟡 MEDIUM</span>', 
+                                    'Low': '<span class="severity-low">🟢 LOW</span>'
+                                }.get(detail['severity'], '<span class="severity-medium">⚪ UNKNOWN</span>')
                                 
-                                with st.expander(f"{severity_color} {detail['category']}: {detail['issue']}", expanded=True):
+                                with st.expander(f"{detail['category']}: {detail['issue']}", expanded=False):
+                                    st.markdown(severity_badge, unsafe_allow_html=True)
                                     st.write(f"**Issue:** {detail['details']}")
                                     
                                     # Show specific examples based on category
@@ -600,15 +837,33 @@ def main():
                                             for item in detail['required_items']:
                                                 st.write(f"• {item}")
                         else:
-                            # Fallback to simple list if no detailed breakdown
+                            st.markdown("""
+                            <div class="error-card">
+                                <h3 style="margin-top: 0; font-weight: 600;">⚠️ Areas for Improvement</h3>
+                            </div>
+                            """, unsafe_allow_html=True)
                             for weakness in results['weaknesses']:
-                                st.write(f"• {weakness}")
+                                st.markdown(f"""
+                                <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; border-left: 4px solid #ef4444; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                                    <span style="color: #dc2626; font-weight: 500;">• {weakness}</span>
+                                </div>
+                                """, unsafe_allow_html=True)
                     
-                    # Suggestions
+                    # Modern suggestions display
                     if results['suggestions']:
-                        st.info("💡 **Improvement Suggestions**")
+                        st.markdown("""
+                        <div class="info-card">
+                            <h3 style="margin-top: 0; font-weight: 600; color: #2d3748;">💡 Quick Action Items</h3>
+                            <p style="margin-bottom: 0; color: #4a5568;">Priority improvements to boost your ATS score</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
                         for i, suggestion in enumerate(results['suggestions'], 1):
-                            st.write(f"{i}. {suggestion}")
+                            st.markdown(f"""
+                            <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; border-left: 4px solid #3182ce; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                                <span style="color: #2b6cb0; font-weight: 500;">{i}. {suggestion}</span>
+                            </div>
+                            """, unsafe_allow_html=True)
                 
                 # Detailed breakdown
                 with st.expander("📊 Detailed Analysis"):
@@ -628,31 +883,79 @@ def main():
             st.error(f"An error occurred while processing your resume: {str(e)}")
     
     else:
-        # Instructions when no file is uploaded
-        st.info("👆 Please upload your resume using the sidebar to get started.")
+        # Modern welcome screen
+        col1, col2, col3 = st.columns([1, 2, 1])
         
-        st.markdown("""
-        ### How it works:
-        1. **Upload** your resume (PDF or text format)
-        2. **Optionally** paste a job description for targeted analysis
-        3. **Click** "Analyze Resume" to get instant feedback
-        4. **Review** strengths, weaknesses, and improvement suggestions
+        with col2:
+            st.markdown("""
+            <div style="text-align: center; padding: 3rem 2rem; background: white; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); margin: 2rem 0;">
+                <div style="font-size: 4rem; margin-bottom: 1rem;">📄</div>
+                <h2 style="color: #2d3748; margin-bottom: 1rem; font-weight: 600;">Ready to Optimize Your Resume?</h2>
+                <p style="color: #718096; font-size: 1.1rem; margin-bottom: 2rem;">Upload your resume using the sidebar to get started with AI-powered analysis</p>
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 0.75rem 1.5rem; border-radius: 8px; display: inline-block; font-weight: 600;">👈 Start Here</div>
+            </div>
+            """, unsafe_allow_html=True)
         
-        ### What we analyze:
-        - ✅ Keyword matching with job requirements
-        - ✅ Employment gaps detection
-        - ✅ Quantified achievements
-        - ✅ Action verb strength
-        - ✅ Resume length and formatting
-        - ✅ Contact information completeness
+        # Feature cards
+        st.markdown("### ✨ What We Analyze")
         
-        ### Future enhancements:
-        - ML-based section parsing
-        - Industry-specific keyword databases
-        - ATS formatting score
-        - Skills gap analysis
-        - Resume template suggestions
-        """)
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.markdown("""
+            <div class="metric-card">
+                <div style="font-size: 2rem; margin-bottom: 1rem;">🎯</div>
+                <h4 style="color: #2d3748; margin-bottom: 0.5rem;">Keyword Matching</h4>
+                <p style="color: #718096; font-size: 0.9rem;">Compare against job requirements</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown("""
+            <div class="metric-card">
+                <div style="font-size: 2rem; margin-bottom: 1rem;">📊</div>
+                <h4 style="color: #2d3748; margin-bottom: 0.5rem;">Achievement Analysis</h4>
+                <p style="color: #718096; font-size: 0.9rem;">Quantified results detection</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            st.markdown("""
+            <div class="metric-card">
+                <div style="font-size: 2rem; margin-bottom: 1rem;">💪</div>
+                <h4 style="color: #2d3748; margin-bottom: 0.5rem;">Language Strength</h4>
+                <p style="color: #718096; font-size: 0.9rem;">Action verb optimization</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.markdown("""
+            <div class="metric-card">
+                <div style="font-size: 2rem; margin-bottom: 1rem;">📅</div>
+                <h4 style="color: #2d3748; margin-bottom: 0.5rem;">Gap Detection</h4>
+                <p style="color: #718096; font-size: 0.9rem;">Employment history analysis</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown("""
+            <div class="metric-card">
+                <div style="font-size: 2rem; margin-bottom: 1rem;">📏</div>
+                <h4 style="color: #2d3748; margin-bottom: 0.5rem;">Format Check</h4>
+                <p style="color: #718096; font-size: 0.9rem;">Length and structure validation</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            st.markdown("""
+            <div class="metric-card">
+                <div style="font-size: 2rem; margin-bottom: 1rem;">📞</div>
+                <h4 style="color: #2d3748; margin-bottom: 0.5rem;">Contact Info</h4>
+                <p style="color: #718096; font-size: 0.9rem;">Professional details check</p>
+            </div>
+            """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
